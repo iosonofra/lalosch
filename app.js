@@ -838,19 +838,6 @@ function updateWallTheme() {
   applyWallStyle(state.wallStyle || 'dark_concrete');
 }
 
-function updateWallBackIndicator() {
-  const hint = $('wall-back-hint');
-  if (!hint) return;
-  if (state.view !== 'assembled') {
-    if (!hint.hidden) hint.hidden = true;
-    return;
-  }
-  const wallZ = Number(state.result?.meta?.wallZ ?? state.result?.meta?.params?.depth ?? 50);
-  const isBehind = camera.position.z > (wallZ + 15);
-  if (hint.hidden === isBehind) {
-    hint.hidden = !isBehind;
-  }
-}
 
 function initializeViewer() {
   try {
@@ -899,7 +886,6 @@ function initializeViewer() {
     renderer.setAnimationLoop(() => {
       updateExplodeAnimation();
       controls.update();
-      updateWallBackIndicator();
       renderer.render(scene, camera);
     });
   } catch (error) {
@@ -1519,7 +1505,7 @@ function fitView() {
   const maximum = Math.max(size.x, size.y, size.z, 50);
   const halfAngle = THREE.MathUtils.degToRad(camera.fov / 2);
   const isPortrait = camera.aspect < 1.0;
-  const paddingFactor = isPortrait ? 1.18 : 1.35;
+  const paddingFactor = isPortrait ? 1.25 : 1.35;
   const distance = Math.max(
     size.y / (2 * Math.tan(halfAngle)),
     size.x / (2 * Math.tan(halfAngle) * camera.aspect),
@@ -1537,8 +1523,8 @@ function fitView() {
     // Balanced isometric perspective:
     // On mobile portrait, avoid excessive lateral (X) and vertical (Y) shift
     // so the lamp is prominently centered and background is stable
-    const xAngle = isPortrait ? 0.18 : 0.35;
-    const yAngle = isPortrait ? 0.30 : 0.55;
+    const xAngle = isPortrait ? 0.16 : 0.35;
+    const yAngle = isPortrait ? 0.24 : 0.55;
     direction = new THREE.Vector3(xAngle, yAngle, state.view === 'print' ? 1 : -1).normalize();
   }
   camera.position.copy(center).addScaledVector(direction, distance);
@@ -2210,7 +2196,6 @@ $('reset-config').addEventListener('click', () => { writeParams(INITIAL); markDi
 all('[data-view]').forEach((button) => button.addEventListener('click', () => switchView(button.dataset.view)));
 all('[data-camera]').forEach((button) => button.addEventListener('click', () => setCameraView(button.dataset.camera)));
 $('fit-view').addEventListener('click', fitView);
-$('wall-hint-btn')?.addEventListener('click', () => setCameraView('iso'));
 all('[data-wall-style]').forEach((button) => button.addEventListener('click', () => applyWallStyle(button.dataset.wallStyle)));
 $('show-internals').addEventListener('click', toggleInternals);
 $('toggle-light')?.addEventListener('click', toggleLampLight);
