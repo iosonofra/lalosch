@@ -190,21 +190,55 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,su
 }
 @media(max-width:730px){
   .app-name{font-size:20px;line-height:1.15;letter-spacing:-.3px}
-  .config-heading h1{font-size:45px}
-  .control-section h2{font-size:23px}
-  .mobile-live-preview{background:var(--brand-paper)}
-  .preview-heading h2{font-size:29px}
-  .preview-heading h2>#project-shape{font-size:23px}
-  .card-heading h3{font-size:24px}
-  .export-card h3{font-size:33px}
-  .startup-requirements h3{font-size:31px}
+  .config-heading h1{font-size:34px}
+  .control-section h2{font-size:18px}
+  .mobile-live-preview{
+    position: relative !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 6px !important;
+  }
+  .mobile-live-preview .live-word-preview{
+    min-height: 56px !important;
+    max-height: 68px !important;
+    margin: 2px 0 !important;
+    padding: 4px !important;
+  }
+  .mobile-live-preview .live-word-preview>svg{
+    height: 56px !important;
+    max-height: 56px !important;
+  }
+  .preview-panel{
+    padding: 12px 14px 0 !important;
+  }
+  .config-panel{
+    padding: 14px 14px 0 !important;
+  }
+  .preview-heading{
+    margin-bottom: 8px !important;
+    gap: 8px !important;
+  }
+  .preview-heading h2{font-size:22px}
+  .preview-heading h2>#project-shape{font-size:16px}
+  .viewer-shell{
+    height: clamp(280px, 44vh, 330px) !important;
+    min-height: 280px !important;
+    border-radius: 14px !important;
+  }
+  .card-heading h3{font-size:20px}
+  .export-card h3{font-size:26px}
+  .startup-requirements h3{font-size:26px}
 }
 @media(max-width:420px){
-  .app-name{font-size:19px}
-  .config-heading h1{font-size:42px}
-  .preview-heading h2{font-size:26px}
-  .preview-heading h2>#project-shape{font-size:21px}
-  .export-card h3{font-size:31px}
+  .app-name{font-size:18px}
+  .config-heading h1{font-size:30px}
+  .preview-heading h2{font-size:20px}
+  .preview-heading h2>#project-shape{font-size:15px}
+  .viewer-shell{
+    height: 290px !important;
+    min-height: 280px !important;
+  }
+  .export-card h3{font-size:24px}
 }
 
 /* Custom icon and SVG size overrides to fix squishing */
@@ -575,6 +609,32 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,su
   color: #fff;
   border-color: #ff7bb5;
   box-shadow: 0 0 12px rgba(255, 79, 156, 0.45);
+}
+
+@media(max-width: 560px) {
+  .wall-style-selector {
+    top: 48px;
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+    padding: 3px 6px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+  .wall-style-selector::-webkit-scrollbar {
+    display: none;
+  }
+  .wall-style-label {
+    display: none;
+  }
+  .wall-chip {
+    padding: 4px 8px;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
 }
 
 /* ==========================================================================

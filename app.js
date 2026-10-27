@@ -531,6 +531,7 @@ function createWoodSlatsTexture(isNight = false) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3, 1);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
@@ -590,6 +591,7 @@ function createConcreteTexture(isNight = false) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 1.5);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
@@ -640,6 +642,7 @@ function createPlasterTexture(isNight = false) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 1.5);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
@@ -707,11 +710,14 @@ function createWallModule() {
   const wallGroup = new THREE.Group();
   wallGroup.name = 'wallModule';
 
-  const width = 680, height = 500, depth = 24;
+  // Panoramic architectural backdrop (2400 x 1800 x 24 mm)
+  // Generous dimensions ensure the wall seamlessly covers the entire 3D viewer background
+  // on all mobile and desktop aspect ratios without edge cutoffs or lateral offset illusions.
+  const width = 2400, height = 1800, depth = 24;
   const geometry = new THREE.BoxGeometry(width, height, depth);
 
   const sideMat = new THREE.MeshStandardMaterial({
-    color: 0xd2cdc2,
+    color: 0x14131a,
     roughness: 0.88,
     metalness: 0.02
   });
@@ -752,11 +758,11 @@ function createWallModule() {
   // 5: -Z (front of wall facing lamp & camera)
   const materials = [sideMat, sideMat, sideMat, sideMat, backMat, frontMat];
   const wallMesh = new THREE.Mesh(geometry, materials);
-  wallMesh.receiveShadow = false; // Disables harsh object drop shadows on the wall
+  wallMesh.receiveShadow = false;
   wallMesh.position.z = depth / 2;
   wallGroup.add(wallMesh);
 
-  // Volumetric wall-wash lighting gradient behind the lamp
+  // Volumetric wall-wash lighting gradient behind the lamp (covers 1200 x 950 mm smoothly)
   const washTexture = createVolumetricLightWashTexture();
   const washMat = new THREE.MeshBasicMaterial({
     map: washTexture,
@@ -766,28 +772,15 @@ function createWallModule() {
     depthWrite: false,
     toneMapped: false
   });
-  const washMesh = new THREE.Mesh(new THREE.PlaneGeometry(width * 0.98, height * 0.96), washMat);
+  const washMesh = new THREE.Mesh(new THREE.PlaneGeometry(1200, 950), washMat);
   washMesh.position.set(0, 0, -0.02);
   washMesh.renderOrder = 0;
   wallGroup.add(washMesh);
-
-  // Architectural frame outline on front face
-  const frameGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-width / 2, -height / 2, 0.02),
-    new THREE.Vector3(width / 2, -height / 2, 0.02),
-    new THREE.Vector3(width / 2, height / 2, 0.02),
-    new THREE.Vector3(-width / 2, height / 2, 0.02),
-    new THREE.Vector3(-width / 2, -height / 2, 0.02)
-  ]);
-  const frameMat = new THREE.LineBasicMaterial({ color: 0xbbb5a8, transparent: true, opacity: 0.45 });
-  const frameLine = new THREE.Line(frameGeo, frameMat);
-  wallGroup.add(frameLine);
 
   wallGroup.userData = {
     frontMat,
     sideMat,
     backMat,
-    frameMat,
     washMat,
     washMesh,
     textures,
@@ -1525,12 +1518,29 @@ function fitView() {
   const center = box.getCenter(new THREE.Vector3());
   const maximum = Math.max(size.x, size.y, size.z, 50);
   const halfAngle = THREE.MathUtils.degToRad(camera.fov / 2);
-  const distance = Math.max(size.y / (2 * Math.tan(halfAngle)), size.x / (2 * Math.tan(halfAngle) * camera.aspect), maximum * .7) * 1.35;
+  const isPortrait = camera.aspect < 1.0;
+  const paddingFactor = isPortrait ? 1.18 : 1.35;
+  const distance = Math.max(
+    size.y / (2 * Math.tan(halfAngle)),
+    size.x / (2 * Math.tan(halfAngle) * camera.aspect),
+    maximum * .7
+  ) * paddingFactor;
+
   let direction;
-  if (state.camera === 'front') direction = new THREE.Vector3(0, 0, state.view === 'print' ? 1 : -1);
-  else if (state.camera === 'top') direction = new THREE.Vector3(0, 1, .015);
-  else if (state.camera === 'bottom') direction = new THREE.Vector3(0.05, -0.65, state.view === 'print' ? 0.35 : -0.7).normalize();
-  else direction = new THREE.Vector3(.35, .55, state.view === 'print' ? 1 : -1).normalize();
+  if (state.camera === 'front') {
+    direction = new THREE.Vector3(0, 0, state.view === 'print' ? 1 : -1);
+  } else if (state.camera === 'top') {
+    direction = new THREE.Vector3(0, 1, .015);
+  } else if (state.camera === 'bottom') {
+    direction = new THREE.Vector3(0.05, -0.65, state.view === 'print' ? 0.35 : -0.7).normalize();
+  } else {
+    // Balanced isometric perspective:
+    // On mobile portrait, avoid excessive lateral (X) and vertical (Y) shift
+    // so the lamp is prominently centered and background is stable
+    const xAngle = isPortrait ? 0.18 : 0.35;
+    const yAngle = isPortrait ? 0.30 : 0.55;
+    direction = new THREE.Vector3(xAngle, yAngle, state.view === 'print' ? 1 : -1).normalize();
+  }
   camera.position.copy(center).addScaledVector(direction, distance);
   camera.near = .1; camera.far = Math.max(5000, distance * 8); camera.updateProjectionMatrix();
   controls.target.copy(center); controls.update();

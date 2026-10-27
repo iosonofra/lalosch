@@ -174,8 +174,8 @@ body{font-size:14px}
   .config-panel{order:0;overflow:visible}
   .preview-panel{order:1}
   .results-panel{order:2}
-  .mobile-live-preview{display:block;position:sticky;top:0;z-index:8;background:#fff;padding:6px 0 9px;margin-bottom:14px}
-  .mobile-live-preview .live-word-preview{margin:0}
-  .mobile-live-preview .live-word-preview>svg{height:clamp(96px,20svh,144px);aspect-ratio:auto}
-  #config-form :is(input,select,button){scroll-margin-top:168px;scroll-margin-bottom:24px}
+  .mobile-live-preview{display:block;position:relative;background:#fff;padding:0;margin-bottom:8px}
+  .mobile-live-preview .live-word-preview{margin:0;min-height:58px;padding:4px}
+  .mobile-live-preview .live-word-preview>svg{height:58px;max-height:58px;aspect-ratio:auto}
+  #config-form :is(input,select,button){scroll-margin-top:72px;scroll-margin-bottom:24px}
 }
