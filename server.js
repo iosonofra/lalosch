@@ -2,6 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import zlib from 'zlib';
 import JSZip from 'jszip';
 import { meshToBinarySTL, createStlPackage, cleanLampData } from './stl-exporter.js';
 
@@ -22,6 +23,43 @@ const MIME_TYPES = {
   '.stl': 'model/stl',
   '.zip': 'application/zip'
 };
+
+function sendCompressed(req, res, statusCode, contentType, data) {
+  const isBuffer = Buffer.isBuffer(data);
+  const buffer = isBuffer ? data : Buffer.from(data, 'utf8');
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+
+  const isCompressible = contentType.includes('json') ||
+    contentType.includes('text') ||
+    contentType.includes('javascript') ||
+    contentType.includes('css') ||
+    contentType.includes('svg');
+
+  if (isCompressible && acceptEncoding.includes('gzip') && buffer.length > 512) {
+    zlib.gzip(buffer, { level: 6 }, (err, gzipped) => {
+      if (!err && gzipped) {
+        res.writeHead(statusCode, {
+          'Content-Type': contentType,
+          'Content-Encoding': 'gzip',
+          'Content-Length': gzipped.length
+        });
+        res.end(gzipped);
+        return;
+      }
+      res.writeHead(statusCode, {
+        'Content-Type': contentType,
+        'Content-Length': buffer.length
+      });
+      res.end(buffer);
+    });
+  } else {
+    res.writeHead(statusCode, {
+      'Content-Type': contentType,
+      'Content-Length': buffer.length
+    });
+    res.end(buffer);
+  }
+}
 
 const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -69,12 +107,10 @@ const server = http.createServer(async (req, res) => {
       try {
         const parsed = JSON.parse(fs.readFileSync(previewCacheFile, 'utf8'));
         cleanLampData(parsed, cableExit);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(parsed));
+        sendCompressed(req, res, 200, 'application/json; charset=utf-8', JSON.stringify(parsed));
         return;
       } catch (e) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(fs.readFileSync(previewCacheFile, 'utf8'));
+        sendCompressed(req, res, 200, 'application/json; charset=utf-8', fs.readFileSync(previewCacheFile, 'utf8'));
         return;
       }
     }
@@ -100,16 +136,13 @@ const server = http.createServer(async (req, res) => {
           cleanLampData(parsed);
           const cleanedText = JSON.stringify(parsed);
           fs.writeFileSync(previewCacheFile, cleanedText, 'utf8');
-          res.writeHead(status, { 'Content-Type': 'application/json' });
-          res.end(cleanedText);
+          sendCompressed(req, res, status, 'application/json; charset=utf-8', cleanedText);
           return;
         } catch (e) {}
       }
-      res.writeHead(status, { 'Content-Type': 'application/json' });
-      res.end(responseText);
+      sendCompressed(req, res, status, 'application/json; charset=utf-8', responseText);
     } catch (err) {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'NOT_FOUND', message: 'Elemento non disponibile.' }));
+      sendCompressed(req, res, 404, 'application/json; charset=utf-8', JSON.stringify({ error: 'NOT_FOUND', message: 'Elemento non disponibile.' }));
     }
     return;
   }
@@ -138,8 +171,7 @@ const server = http.createServer(async (req, res) => {
           try {
             const parsed = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
             cleanLampData(parsed, cableExit);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(parsed));
+            sendCompressed(req, res, 200, 'application/json; charset=utf-8', JSON.stringify(parsed));
             return;
           } catch (e) {
             console.error('[Cache] Errore lettura cache:', e);
@@ -175,20 +207,17 @@ const server = http.createServer(async (req, res) => {
             if (cableExit === 'right') {
               cleanLampData(parsed, 'right');
             }
-            res.writeHead(status, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(parsed));
+            sendCompressed(req, res, status, 'application/json; charset=utf-8', JSON.stringify(parsed));
             return;
           } catch (e) {
             console.error('[Proxy] Errore elaborazione risposta:', e);
           }
         }
 
-        res.writeHead(status, { 'Content-Type': 'application/json' });
-        res.end(responseText);
+        sendCompressed(req, res, status, 'application/json; charset=utf-8', responseText);
       } catch (err) {
         console.error('[Proxy] Errore proxy:', err);
-        res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'PROXY_ERROR', message: err.message }));
+        sendCompressed(req, res, 502, 'application/json; charset=utf-8', JSON.stringify({ error: 'PROXY_ERROR', message: err.message }));
       }
     });
     return;
@@ -246,8 +275,19 @@ const server = http.createServer(async (req, res) => {
 
     const ext = path.extname(safePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(safePath).pipe(res);
+    if (stats.size > 512 && MIME_TYPES[ext] && !['.png', '.jpg', '.zip', '.stl'].includes(ext)) {
+      fs.readFile(safePath, (readErr, data) => {
+        if (readErr) {
+          res.writeHead(500);
+          res.end('Server error');
+          return;
+        }
+        sendCompressed(req, res, 200, contentType, data);
+      });
+    } else {
+      res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': stats.size });
+      fs.createReadStream(safePath).pipe(res);
+    }
   });
 });
 

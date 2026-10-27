@@ -9,9 +9,13 @@ test_output/
 *.zip
 preview_response.json
 
-# Runtime cache
+# Runtime cache (ignore dynamic, track baseline defaults)
 cache/*.json
 !cache/.gitkeep
+!cache/979d52e82c7e8a6fbe49d0ff391f4abaeea069ec5ca7545689412278aad60f16.json
+!cache/preview_ee3f2dd2-11b7-4aac-8644-d94df5711d0a.json
+!cache/c64d1549f06fe2a7b1b3d1f55260f15612d6fb42c204ac1164769dd1519a643c.json
+!cache/preview_80d98d52-b52b-467a-84bc-bff93f928bbe.json
 
 # Logs and environment
 *.log

@@ -1874,12 +1874,13 @@ function startLoadingProgress(mainTitle = 'Costruzione della lampada 3D') {
   }
 
   const stages = [
-    { at: 15, badge: 'MOTORE CAD ONLINE', step: 'Inizializzazione calcolo geometrico OpenCASCADE...' },
-    { at: 35, badge: 'MODELLAZIONE SCOCCA', step: 'Generazione scocca esterna e raccordi 10 mm...' },
-    { at: 55, badge: 'TAGLIO STENCIL CAD', step: 'Incisione stencil lettere e ponti ottici...' },
-    { at: 75, badge: 'DIFFUSORE OTTICO', step: 'Modellazione diffusore trasparente in PETG...' },
-    { at: 88, badge: 'HARDWARE & CAVO', step: 'Calibrazione sede IKEA KAPPLAKE e passacavi...' },
-    { at: 96, badge: 'CREAZIONE FILE STL', step: 'Finalizzazione coordinate bicolore e mesh 3D...' }
+    { at: 12, badge: 'MOTORE CAD ONLINE', step: 'Inizializzazione calcolo geometrico OpenCASCADE...' },
+    { at: 32, badge: 'MODELLAZIONE SCOCCA', step: 'Generazione scocca esterna e raccordi 10 mm...' },
+    { at: 52, badge: 'TAGLIO STENCIL CAD', step: 'Incisione stencil lettere e ponti ottici...' },
+    { at: 70, badge: 'DIFFUSORE OTTICO', step: 'Modellazione diffusore trasparente in PETG...' },
+    { at: 84, badge: 'HARDWARE & CAVO', step: 'Calibrazione sede IKEA KAPPLAKE e passacavi...' },
+    { at: 92, badge: 'CALCOLO BOOLEANO 3D', step: 'Unione volumetrica e taglio solido...' },
+    { at: 96, badge: 'FINALIZZAZIONE MESH', step: 'Compilazione coordinate bicolore e buffer 3D...' }
   ];
 
   if (progressBar) progressBar.style.width = '12%';
@@ -1887,22 +1888,28 @@ function startLoadingProgress(mainTitle = 'Costruzione della lampada 3D') {
   if (stepText) stepText.textContent = stages[0].step;
   if (stageBadge) stageBadge.textContent = stages[0].badge;
 
+  const startTime = Date.now();
   loadingProgressTimer = setInterval(() => {
-    if (currentLoadingPercent < 97) {
-      const step = currentLoadingPercent < 45 ? 4 : (currentLoadingPercent < 80 ? 2 : 1);
-      currentLoadingPercent = Math.min(97, currentLoadingPercent + step);
-      if (progressBar) progressBar.style.width = `${currentLoadingPercent}%`;
-      if (percentText) percentText.textContent = `${currentLoadingPercent}%`;
+    const elapsedSeconds = (Date.now() - startTime) / 1000;
+    // Smooth continuous progression over ~50-60s so progress never freezes
+    const targetPercent = Math.min(98, Math.round(12 + 86 * (1 - Math.exp(-elapsedSeconds / 28))));
+    if (targetPercent > currentLoadingPercent) {
+      currentLoadingPercent = targetPercent;
+    } else if (currentLoadingPercent < 98 && Math.random() < 0.25) {
+      currentLoadingPercent = Math.min(98, currentLoadingPercent + 1);
+    }
 
-      for (let i = stages.length - 1; i >= 0; i--) {
-        if (currentLoadingPercent >= stages[i].at) {
-          if (stepText) stepText.textContent = stages[i].step;
-          if (stageBadge) stageBadge.textContent = stages[i].badge;
-          break;
-        }
+    if (progressBar) progressBar.style.width = `${currentLoadingPercent}%`;
+    if (percentText) percentText.textContent = `${currentLoadingPercent}%`;
+
+    for (let i = stages.length - 1; i >= 0; i--) {
+      if (currentLoadingPercent >= stages[i].at) {
+        if (stepText) stepText.textContent = stages[i].step;
+        if (stageBadge) stageBadge.textContent = stages[i].badge;
+        break;
       }
     }
-  }, 420);
+  }, 350);
 }
 
 function stopLoadingProgress(success = true) {
