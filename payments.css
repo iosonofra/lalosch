@@ -1,0 +1,25 @@
+.export-card[data-checkout="server"]{display:flex;flex-direction:column;gap:12px}
+.export-card[data-checkout="server"] .download-button{margin-top:0}
+.export-summary{font-size:13px;line-height:1.65;color:#ffe4ef;margin:12px 0 9px}
+.download-license{margin:0;padding-top:12px;border-top:1px solid #6f3e56;font-size:12px;line-height:1.65;color:#e9ccda}
+.download-license>span:first-child{color:#fff0f7}
+.download-license>a{color:#ffb4d5;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.download-license>a:hover{color:#fff}
+.payment-confirmation{border:1px solid #6f3e56;border-radius:9px;padding:12px;color:#f8e6ef}
+.payment-sandbox-notice{margin:0;padding:11px 12px;border:1px solid #ff8fbe;border-radius:9px;background:#39212e;color:#ffe6f1;font-size:12px;line-height:1.6}
+.payment-summary{font-size:13px;line-height:1.6;margin:0 0 12px;overflow-wrap:anywhere}
+.payment-consent{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.6;cursor:pointer}
+.payment-consent input{width:17px;height:17px;margin:2px 0 0;flex:none;accent-color:#ff4f9c}
+.payment-purchase-notice{font-size:12px;line-height:1.65;color:#ffe4ef;margin:10px 0 13px}
+.payment-rights{font-size:12px;line-height:1.5;color:#d6bdca;margin:9px 0 0}
+.receipt-download{border:1px solid #ff8fbe;border-radius:7px;padding:9px 11px;background:transparent;color:#ffd9e9;font-size:13px;text-align:left}
+.receipt-download:hover{background:#39212e}
+.receipt-download:disabled{opacity:.5}
+.export-card>#payment-note{grid-column:1/-1;margin:8px 0;font-size:12px;line-height:1.6}
+.revision-status{border-top:1px solid #6f3e56;padding-top:12px;color:#ffe4ef}
+.revision-status>strong{font-size:13px}
+.revision-status>p{font-size:12px;line-height:1.6;color:#d6bdca;margin:7px 0 10px}
+.revision-status>button{width:100%;margin-top:7px}
+#use-revision{background:#ffb4d5;color:#27151e;border-color:#ffb4d5}
+#revision-confirmation>button{margin-top:12px}
+#revision-confirmation>#cancel-revision{color:#6c2446;border-color:#d7a5bc;margin-left:8px}

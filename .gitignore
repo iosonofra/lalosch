@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Generated 3D outputs & test artifacts
+output/
+output_cli_right/
+test_output/
+*.stl
+*.zip
+preview_response.json
+
+# Runtime cache
+cache/*.json
+!cache/.gitkeep
+
+# Logs and environment
+*.log
+npm-debug.log*
+.env
+.env.local
+
+# Operating System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,18 @@
+services:
+  lalosch:
+    build: .
+    image: lalosch-app:latest
+    container_name: lalosch-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      - lalosch_cache:/app/cache
+      - lalosch_output:/app/output
+
+volumes:
+  lalosch_cache:
+  lalosch_output:

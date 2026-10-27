@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151217">
+  <meta name="description" content="Configura una lampada a parole con pannelli di proiezione. Genera i file STL 3D per il materiale opaco e trasparente pronti per la stampa.">
+  <title>LaLosch — 3D STL Generator & Viewer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f20071'/%3E%3Ctext x='16' y='23' font-family='Impact,sans-serif' font-size='22' font-weight='bold' fill='white' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./payments.css">
+  <link rel="stylesheet" href="./lalosch-theme.css">
+
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/","three-mesh-bvh":"./vendor/three-mesh-bvh.module.js","three-bvh-csg":"./vendor/three-bvh-csg.module.js"}}</script>
+  <script src="./vendor/jszip.min.js" defer></script>
+  <script src="./runtime-config.js"></script>
+  <script type="module" src="./app.js?v=lalosch1"></script>
+  <style>
+    .cable-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .cable-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #fffafb;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .cable-card input[type="radio"] {
+      margin-top: 3px;
+      accent-color: #ff4f9c;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .cable-card:hover {
+      border-color: #ff80b7;
+      background: #fff5f9;
+    }
+    .cable-card.selected {
+      border-color: #ff4f9c;
+      background: #fff0f7;
+      box-shadow: inset 0 0 0 1px #ff4f9c30;
+    }
+    .cable-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .cable-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .cable-card-title strong {
+      font-size: 13px;
+      font-weight: 650;
+      color: var(--ink);
+    }
+    .cable-card-body p {
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #777077;
+    }
+    .cable-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .cable-badge.standard {
+      background: #ebebeb;
+      color: #666;
+    }
+    .cable-badge.light {
+      background: #ff4f9c22;
+      border: 1px solid #ff4f9c66;
+      color: #ff2787;
+    }
+    .stl-extra-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .stl-quick-btn {
+      background: #251d24;
+      border: 1px solid #5b4351;
+      color: #ffe4f0;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+    .stl-quick-btn:hover:not(:disabled) {
+      background: #3e2e3c;
+      border-color: #ff4f9c;
+      color: #fff;
+    }
+    .stl-quick-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .free-badge {
+      background: #34d39922;
+      border: 1px solid #34d39966;
+      color: #34d399;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 6h10.2a2 2 0 0 1 1.4.6l4.7 4.7a1 1 0 0 1 0 1.4l-4.7 4.7a2 2 0 0 1-1.4.6H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/></symbol>
+    <symbol id="i-sign-left" viewBox="0 0 24 24"><use href="#i-arrow" transform="translate(24 0) scale(-1 1)"/></symbol>
+    <symbol id="i-rect" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/></symbol>
+    <symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm0 10 9-5M12 12 3 7m9 5v10M7.5 4.5l9 5"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8h8v8H8z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Zm0 6v5m0 3v.1"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></symbol>
+    <symbol id="i-light" viewBox="0 0 24 24"><path d="M8 15a6 6 0 1 1 8 0l-1 3H9l-1-3Zm1 6h6M12 1V0M3 4 1 2m20 2 2-2"/></symbol>
+    <symbol id="i-explode" viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M2 12h4m12 0h4m-3.5-6.5l-2.8 2.8m-11.4 0l2.8-2.8m0 11.4l-2.8 2.8m11.4 0l-2.8-2.8M9 9h6v6H9z"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-10 10c0 5.5 4.5 10 10 10a3 3 0 0 0 3-3c0-.8-.3-1.5-.8-2-.5-.5-.7-1.2-.7-2 0-1.7 1.3-3 3-3h2a5 5 0 0 0 5-5c0-5.5-4.5-10-10-10z"/><circle cx="7.5" cy="11.5" r="1.5" fill="currentColor"/><circle cx="12" cy="7.5" r="1.5" fill="currentColor"/><circle cx="16.5" cy="11.5" r="1.5" fill="currentColor"/></symbol>
+  </svg>
+
+  <header class="app-header">
+    <a class="brand" href="#" aria-label="LaLosch STL Generator">
+      <span class="brand-mark">L</span>
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="app-name" data-no-translate>LaLosch <span style="font-size: 13px; color: #ff4f9c; font-weight: 500;">STL Generator</span></span>
+    </a>
+    <div class="header-caption">PAROLE CHE FANNO LUCE · GENERATORE 3D</div>
+    <div class="header-right">
+      <span class="free-badge">✓ STL Esportazione Illimitata</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="config-panel" aria-labelledby="config-title">
+      <div class="mobile-live-preview" id="mobile-live-preview"></div>
+      <div class="config-heading">
+        <div>
+          <p class="eyebrow">DISEGNA CON LA LUCE</p>
+          <h1 id="config-title">La tua lampada.</h1>
+        </div>
+        <button class="icon-button reset-button" id="reset-config" title="Ripristina i valori iniziali" aria-label="Ripristina i valori iniziali"><svg><use href="#i-reset"/></svg></button>
+      </div>
+      <form id="config-form" novalidate>
+        <section class="control-section">
+          <h2><span class="step-number">01</span> La forma</h2>
+          <div class="shape-selector" role="group" aria-label="Forma della lampada">
+            <button type="button" class="shape-choice selected" data-shape="rectangle" aria-pressed="true" aria-label="Rettangolo" title="Rettangolo"><svg aria-hidden="true"><use href="#i-rect"/></svg></button>
+            <button type="button" class="shape-choice" data-shape="arrow" aria-pressed="false" aria-label="Cartello stradale" title="Cartello stradale"><svg aria-hidden="true"><use id="shape-direction-preview" href="#i-arrow"/></svg></button>
+          </div>
+          <div class="inline-control" id="direction-control" hidden>
+            <span class="field-label">Direzione</span>
+            <div class="small-segment" role="group" aria-label="Direzione del cartello">
+              <button type="button" data-direction="left" aria-pressed="false" aria-label="Punta verso sinistra" title="Punta verso sinistra"><svg aria-hidden="true"><use href="#i-sign-left"/></svg></button>
+              <button type="button" data-direction="right" class="active" aria-pressed="true" aria-label="Punta verso destra" title="Punta verso destra"><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field-label fillet-label">
+              <span>Raccordi esterni</span>
+              <svg class="fillet-icon" viewBox="0 0 36 28" aria-hidden="true"><rect id="fillet-preview" x="2" y="2" width="32" height="24" rx="10"/></svg>
+            </span>
+            <span class="select-wrap">
+              <select id="filletRadius" name="filletRadius">
+                <option value="0">0 mm · angoli netti</option>
+                <option value="5">5 mm · morbidi</option>
+                <option value="10" selected>10 mm · ampi</option>
+              </select>
+              <svg><use href="#i-chevron"/></svg>
+            </span>
+          </label>
+        </section>
+
+        <section class="control-section">
+          <h2><span class="step-number">02</span> Le parole <button type="button" class="word-advice-button" id="show-word-advice" aria-label="Consiglio sul numero di lettere">4 · 4 · 4 ⓘ</button></h2>
+          <label class="field text-field word-field central-field">
+            <svg class="word-location-icon" data-field-icon="center" viewBox="0 0 96 62" aria-hidden="true"></svg>
+            <span class="word-input">
+              <span class="sr-only">Parola centrale</span>
+              <input id="centerText" name="centerText" type="text" value="MO" placeholder="####" autocomplete="off" spellcheck="false">
+              <span class="char-count" id="center-count">2 / 4</span>
+            </span>
+          </label>
+          <div class="projection-mode-control">
+            <span class="field-label" id="projection-mode-title">Dove proiettare</span>
+            <select id="projectionMode" name="projectionMode" hidden aria-hidden="true" tabindex="-1">
+              <option value="top_bottom" selected>Sopra e sotto</option>
+              <option value="sides">Sul lato piatto</option>
+              <option value="combined">Sopra, sotto e sul lato</option>
+            </select>
+            <div class="projection-mode-choices" role="group" aria-labelledby="projection-mode-title">
+              <button type="button" class="projection-mode-choice active" data-mode="top_bottom" aria-pressed="true"><svg data-mode-icon="top_bottom" viewBox="0 0 82 52" aria-hidden="true"></svg></button>
+              <button type="button" class="projection-mode-choice" data-mode="sides" aria-pressed="false"><svg data-mode-icon="sides" viewBox="0 0 82 52" aria-hidden="true"></svg></button>
+              <button type="button" class="projection-mode-choice" data-mode="combined" aria-pressed="false"><svg data-mode-icon="combined" viewBox="0 0 82 52" aria-hidden="true"></svg></button>
+            </div>
+          </div>
+          <div class="live-word-preview" id="live-word-preview-panel">
+            <svg id="live-word-preview" viewBox="0 0 320 160" role="img" aria-label="Anteprima live delle scritte" data-no-translate></svg>
+          </div>
+          <div class="projection-fields" id="top-bottom-fields">
+            <label class="field text-field word-field">
+              <svg class="word-location-icon" data-field-icon="top" viewBox="0 0 96 62" aria-hidden="true"></svg>
+              <span class="word-input">
+                <span class="sr-only">Sopra</span>
+                <input id="topText" name="topText" type="text" value="TRI" placeholder="####" autocomplete="off" spellcheck="false">
+                <span class="char-count" id="top-count">3 / 4</span>
+              </span>
+            </label>
+            <label class="field text-field word-field">
+              <svg class="word-location-icon" data-field-icon="bottom" viewBox="0 0 96 62" aria-hidden="true"></svg>
+              <span class="word-input">
+                <span class="sr-only">Sotto</span>
+                <input id="bottomText" name="bottomText" type="text" value="NE" placeholder="####" autocomplete="off" spellcheck="false">
+                <span class="char-count" id="bottom-count">2 / 4</span>
+              </span>
+            </label>
+          </div>
+          <div class="projection-fields" id="side-fields" hidden>
+            <label class="field text-field word-field" id="left-field">
+              <svg class="word-location-icon" data-field-icon="left" viewBox="0 0 96 62" aria-hidden="true"></svg>
+              <span class="word-input">
+                <span class="sr-only">Lato sinistro</span>
+                <input id="leftText" name="leftText" type="text" value="" placeholder="##" autocomplete="off" spellcheck="false">
+                <span class="char-count" id="left-count">0 / 2</span>
+              </span>
+            </label>
+            <label class="field text-field word-field" id="right-field">
+              <svg class="word-location-icon" data-field-icon="right" viewBox="0 0 96 62" aria-hidden="true"></svg>
+              <span class="word-input">
+                <span class="sr-only">Lato destro</span>
+                <input id="rightText" name="rightText" type="text" value="" placeholder="##" autocomplete="off" spellcheck="false">
+                <span class="char-count" id="right-count">0 / 2</span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="control-section" id="cable-exit-section">
+          <h2><span class="step-number">03</span> Uscita cavo USB</h2>
+          <div class="cable-selector" role="radiogroup" aria-label="Posizione uscita cavo USB">
+            <label class="cable-card selected" id="cable-card-bottom">
+              <input type="radio" name="cableExit" id="cableExit-bottom" value="bottom" checked>
+              <div class="cable-card-body">
+                <div class="cable-card-title">
+                  <strong>Scelta A · Centrale inferiore</strong>
+                  <span class="cable-badge standard">Standard</span>
+                </div>
+                <p>Uscita classica al centro del fondo: il cavo attraversa l'intaglio tra le lettere inferiori.</p>
+              </div>
+            </label>
+            <label class="cable-card" id="cable-card-right">
+              <input type="radio" name="cableExit" id="cableExit-right" value="right">
+              <div class="cable-card-body">
+                <div class="cable-card-title">
+                  <strong>Scelta B · Laterale destra</strong>
+                  <span class="cable-badge light">Luce 100% libera</span>
+                </div>
+                <p>Uscita sulla scocca destra: i pannelli di proiezione restano <strong>completamente integri</strong> senza intralciare la luce.</p>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section class="control-section" id="filament-color-section">
+          <h2><span class="step-number">04</span> Colori filamento (3D) <button type="button" class="color-preset-reset" id="reset-colors" title="Ripristina colori predefiniti">Reset</button></h2>
+          
+          <div class="color-picker-group">
+            <span class="field-label">Scocca esterna (PLA)</span>
+            <div class="color-swatches" id="opaque-swatches" role="radiogroup" aria-label="Colore scocca">
+              <button type="button" class="color-swatch-btn selected" data-color="#f20071" data-name="Rosa LaLosch" title="Rosa LaLosch" style="--swatch:#f20071"></button>
+              <button type="button" class="color-swatch-btn" data-color="#1e1c21" data-name="Nero Notte" title="Nero Notte" style="--swatch:#1e1c21"></button>
+              <button type="button" class="color-swatch-btn" data-color="#f4f1e9" data-name="Bianco Caldo" title="Bianco Caldo" style="--swatch:#f4f1e9"></button>
+              <button type="button" class="color-swatch-btn" data-color="#c45837" data-name="Terracotta" title="Terracotta" style="--swatch:#c45837"></button>
+              <button type="button" class="color-swatch-btn" data-color="#4d6f58" data-name="Verde Salvia" title="Verde Salvia" style="--swatch:#4d6f58"></button>
+              <button type="button" class="color-swatch-btn" data-color="#1b364e" data-name="Blu Notte" title="Blu Notte" style="--swatch:#1b364e"></button>
+              <button type="button" class="color-swatch-btn" data-color="#e09d26" data-name="Giallo Ocra" title="Giallo Ocra" style="--swatch:#e09d26"></button>
+              <button type="button" class="color-swatch-btn" data-color="#886c99" data-name="Lavanda" title="Lavanda" style="--swatch:#886c99"></button>
+              <label class="color-custom-btn" title="Colore personalizzato">
+                <input type="color" id="opaque-custom-color" value="#f20071" aria-label="Scegli colore personalizzato">
+                <svg><use href="#i-palette"/></svg>
+              </label>
+            </div>
+            <div class="color-meta-row">
+              <span class="color-name" id="opaque-color-name">Rosa LaLosch</span>
+              <div class="finish-switch" role="group" aria-label="Finitura filamento">
+                <button type="button" class="finish-btn active" data-finish="matte">Matte</button>
+                <button type="button" class="finish-btn" data-finish="silk">Silk</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="color-picker-group" style="margin-top: 14px;">
+            <span class="field-label">Diffusore lettere (Trasparente / PETG)</span>
+            <div class="color-swatches" id="trans-swatches" role="radiogroup" aria-label="Colore diffusore">
+              <button type="button" class="color-swatch-btn selected" data-trans="#ffffff" data-name="Bianco Neve" title="Bianco Neve" style="--swatch:#ffffff"></button>
+              <button type="button" class="color-swatch-btn" data-trans="#fff3de" data-name="Avorio Caldo" title="Avorio Caldo" style="--swatch:#fff3de"></button>
+              <button type="button" class="color-swatch-btn" data-trans="#d8ecf5" data-name="Ghiaccio Trasparente" title="Ghiaccio" style="--swatch:#d8ecf5"></button>
+              <button type="button" class="color-swatch-btn" data-trans="#ffea66" data-name="Giallo Sole" title="Giallo Sole" style="--swatch:#ffea66"></button>
+            </div>
+            <div class="color-meta-row">
+              <span class="color-name" id="trans-color-name">Bianco Neve</span>
+            </div>
+          </div>
+        </section>
+
+        <details class="advanced-panel" id="advanced-panel">
+          <summary><span>Regolazione guide & parametri hardware</span><svg><use href="#i-chevron"/></svg></summary>
+          <div class="advanced-content">
+            <label class="field" id="clearance-field">
+              <span class="field-label">Gioco delle guide per lato</span>
+              <span class="unit-input">
+                <input id="railClearance" name="railClearance" type="number" min="0.1" max="0.6" step="0.05" value="0.2">
+                <span>mm</span>
+              </span>
+            </label>
+            <p class="field-note" id="clearance-help">0,2 mm per lato (0,4 mm totali). Calibrato per scorrimento pannello.</p>
+          </div>
+        </details>
+        <div class="validation-errors" id="validation-errors" aria-live="polite" hidden></div>
+      </form>
+      <dialog class="word-advice-dialog" id="word-advice" aria-labelledby="word-advice-title">
+        <button type="button" class="icon-button advice-close" id="close-word-advice" aria-label="Chiudi il consiglio">×</button>
+        <p class="eyebrow">CONSIGLI TIPOGRAFICI</p>
+        <h3 id="word-advice-title">4 al centro, 4 sopra, 4 sotto.</h3>
+        <p>La combinazione ottimale è <strong>4–4–4 lettere</strong>: parole compatte ed equilibrio luminoso perfetto.</p>
+        <p>Minimo 2 caratteri al centro. Le scritte proiettate sono tutte opzionali.</p>
+        <button type="button" class="advice-confirm" id="confirm-word-advice">Ho capito</button>
+      </dialog>
+      <div class="generate-footer">
+        <button class="primary-button" id="generate-button" type="button">
+          <svg><use href="#i-spark"/></svg>
+          <span>Genera lampada 3D</span>
+          <svg class="button-arrow"><use href="#i-arrow-right"/></svg>
+        </button>
+        <p id="generate-hint">Geometria reale calcolata · due materiali separati</p>
+      </div>
+    </aside>
+
+    <main class="preview-panel">
+      <div class="preview-heading">
+        <div>
+          <p class="eyebrow">MODELLO 3D INTERATTIVO</p>
+          <h2 id="project-title">MO<span class="title-divider">/</span><span id="project-shape">Rettangolo</span></h2>
+        </div>
+        <div class="view-switch" role="group" aria-label="Disposizione della lampada">
+          <button type="button" id="view-assembled" class="active" data-view="assembled" aria-pressed="true"><svg><use href="#i-cube"/></svg>Assemblata</button>
+          <button type="button" id="view-print" data-view="print" aria-pressed="false"><svg><use href="#i-layers"/></svg>Piatto Stampa</button>
+        </div>
+      </div>
+
+      <section class="viewer-shell" aria-label="Anteprima tridimensionale della lampada">
+        <div id="viewer" class="viewer"></div>
+        <div class="viewer-empty" id="viewer-empty" hidden>
+          <div class="empty-icon"><svg><use href="#i-light"/></svg></div>
+          <h3>In attesa del calcolo</h3>
+          <p>Premi "Genera lampada 3D" per elaborare la geometria.</p>
+        </div>
+        <div class="viewer-topline">
+          <span class="model-badge" id="model-badge"><span></span>Modello pronto</span>
+          <div class="viewer-top-right">
+            <label class="projection-toggle" id="projection-toggle-wrap"><input id="show-projections" type="checkbox" checked><span>Mostra proiezioni</span></label>
+            <label class="plate-select" id="plate-select-wrap" hidden>
+              <select id="plate-select" aria-label="Piatto da visualizzare"></select>
+              <svg><use href="#i-chevron"/></svg>
+            </label>
+            <span class="units-badge">mm</span>
+          </div>
+        </div>
+        <div class="wall-back-hint" id="wall-back-hint" hidden>
+          <span class="wall-hint-icon">🧱</span>
+          <span class="wall-hint-text">Retro della parete · La lampada è montata sul fronte</span>
+          <button type="button" class="wall-hint-btn" id="wall-hint-btn" title="Torna alla vista frontale">Torna al fronte ↺</button>
+        </div>
+        <div class="wall-style-selector" id="wall-style-selector" role="group" aria-label="Finitura parete">
+          <span class="wall-style-label">Parete:</span>
+          <button type="button" class="wall-chip active" data-wall-style="dark_concrete" aria-pressed="true" title="Microcemento scuro spatolato ad alto contrasto">🏢 Cemento Scuro</button>
+          <button type="button" class="wall-chip" data-wall-style="wood_slats" aria-pressed="false" title="Doghe in legno moderno (Acoustic Slats)">🪵 Doghe Legno</button>
+          <button type="button" class="wall-chip" data-wall-style="soft_plaster" aria-pressed="false" title="Intonaco soft chiaro">🧱 Intonaco</button>
+        </div>
+        <div class="viewer-loading" id="viewer-loading" hidden>
+          <div class="loading-modal-card">
+            <div class="loading-scanner-wrap">
+              <div class="loading-glow-backdrop"></div>
+              <div class="loading-laser-cube">
+                <svg class="loading-cube-icon" viewBox="0 0 24 24"><use href="#i-cube"/></svg>
+                <div class="loading-laser-beam"></div>
+              </div>
+              <div class="loading-orbital-ring ring-1"></div>
+              <div class="loading-orbital-ring ring-2"></div>
+            </div>
+
+            <div class="loading-chip-phase" id="loading-phase-chip">
+              <span class="pulse-dot"></span>
+              <span id="loading-stage-badge">MOTORE CAD ONLINE</span>
+            </div>
+            
+            <strong id="loading-message" class="loading-main-title">Costruzione della lampada 3D</strong>
+            <span id="loading-submessage" class="loading-sub-title">Calcolo aperture e stencil CAD ad alta precisione</span>
+
+            <div class="loading-words-tag" id="loading-words-tag">
+              <span class="loading-word-label">Configurazione:</span>
+              <strong class="loading-word-value" id="loading-word-display">TRI · MO · NE</strong>
+            </div>
+
+            <div class="loading-progress-container">
+              <div class="loading-progress-track">
+                <div class="loading-progress-bar" id="loading-progress-bar">
+                  <div class="loading-progress-shimmer"></div>
+                </div>
+              </div>
+              <div class="loading-progress-meta">
+                <span id="loading-step-text">Generazione geometria scocca...</span>
+                <span id="loading-percent-text">12%</span>
+              </div>
+            </div>
+
+            <div class="loading-ticker">
+              <span>Risoluzione: 0.2 mm · Formato: STEP / STL · Sede: IKEA KAPPLAKE</span>
+            </div>
+          </div>
+        </div>
+        <div class="viewer-tools" role="group" aria-label="Controlli anteprima">
+          <button class="icon-button" id="fit-view" title="Centra il modello" aria-label="Centra il modello"><svg><use href="#i-fit"/></svg></button>
+          <span class="tool-divider"></span>
+          <button class="icon-button" id="show-internals" title="Mostra interni e sede LED" aria-label="Mostra interni e sede LED" aria-pressed="false"><svg><use href="#i-eye"/></svg></button>
+          <button class="icon-button" id="toggle-light" title="Accendi luce / Stanza buia" aria-label="Accendi luce" aria-pressed="false"><svg><use href="#i-light"/></svg></button>
+          <button class="icon-button" id="toggle-explode" title="Vista esploso componenti 3D" aria-label="Vista esploso" aria-pressed="false"><svg><use href="#i-explode"/></svg></button>
+          <span class="tool-divider"></span>
+          <button class="text-tool active" type="button" data-camera="iso" aria-pressed="true">3D</button>
+          <button class="text-tool" type="button" data-camera="front" aria-pressed="false">Fronte</button>
+          <button class="text-tool" type="button" data-camera="top" aria-pressed="false">Alto</button>
+          <button class="text-tool" type="button" data-camera="bottom" aria-pressed="false">Fondo</button>
+        </div>
+        <div class="explode-float-control" id="explode-float-control" hidden>
+          <span class="explode-title">Esploso 3D</span>
+          <input type="range" id="explode-slider" min="0" max="100" value="0" aria-label="Distanza componenti esplosi">
+          <span id="explode-val">0%</span>
+        </div>
+        <div class="viewer-bottomline">
+          <span class="orbit-hint" id="orbit-hint"><span class="mouse-icon" aria-hidden="true"></span>Trascina per ruotare · scorri per zoomare</span>
+          <span class="projection-preview-note" id="projection-preview-note">Proiezione a 44 mm dalla parete</span>
+          <div class="material-legend">
+            <span><i class="material-swatch opaque"></i>Opaco</span>
+            <span><i class="material-swatch transparent"></i>Trasparente</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="results-panel">
+      <div class="results-row">
+        <section class="status-card" aria-labelledby="status-title">
+          <div class="card-heading">
+            <span class="status-symbol valid" id="status-symbol"><svg><use href="#i-check"/></svg></span>
+            <div>
+              <p class="eyebrow">CONTROLLO GEOMETRICO</p>
+              <h3 id="status-title">Modello verificato</h3>
+            </div>
+            <span class="status-chip valid" id="status-chip">PRONTO</span>
+          </div>
+          <div class="metrics" id="metrics">
+            <div>
+              <span>Ingombro scocca</span>
+              <strong id="metric-size">248.8 × 95.0 × 50.0 <small>mm</small></strong>
+            </div>
+            <div>
+              <span>Pezzi da stampare</span>
+              <strong id="metric-parts">3</strong>
+            </div>
+            <div>
+              <span>Sede Lampada</span>
+              <strong>IKEA KAPPLAKE</strong>
+            </div>
+          </div>
+          <div class="status-message" id="status-message" hidden><svg><use href="#i-info"/></svg><p></p></div>
+          <ul class="warnings-list" id="warnings-list" hidden></ul>
+        </section>
+
+        <section class="export-card" aria-labelledby="export-title">
+          <div>
+            <p class="eyebrow">ESPORTAZIONE DIRETTA</p>
+            <h3 id="export-title">Scarica i file STL 3D</h3>
+            <p class="export-summary">File STL ad alta risoluzione pronti per Bambu Studio, OrcaSlicer, Cura, PrusaSlicer.</p>
+            <p class="export-note" id="export-note">Include i file posizionati sui piatti di stampa e il modello assemblato.</p>
+          </div>
+
+          <button class="download-button" id="download-all" type="button">
+            <svg><use href="#i-download"/></svg>
+            <span id="download-label">Scarica Pacchetto STL Completo</span>
+            <span class="file-label">ZIP</span>
+          </button>
+
+          <div class="stl-extra-actions">
+            <button class="stl-quick-btn" id="dl-plate-stl" type="button">
+              <span>Scarica Piatto 1 (Multi-materiale)</span>
+              <span>STL</span>
+            </button>
+            <button class="stl-quick-btn" id="dl-opaque-stl" type="button">
+              <span>Solo Scocca Opaca Assemblata</span>
+              <span>STL</span>
+            </button>
+            <button class="stl-quick-btn" id="dl-trans-stl" type="button">
+              <span>Solo Diffusore Trasparente</span>
+              <span>STL</span>
+            </button>
+          </div>
+          
+          <p class="export-note" style="margin-top: 15px; font-size: 10px; color: #887580;">
+            ✓ Coordinate allineate: carica insieme opaco e trasparente nello slicer per stampa bicolore/AMS.
+          </p>
+        </section>
+      </div>
+      <footer class="workspace-footer">
+        <small class="copyright">LaLosch 3D STL Generator · Tutti i diritti riservati</small>
+      </footer>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+</body>
+</html>

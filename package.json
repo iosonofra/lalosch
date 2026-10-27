@@ -1,0 +1,29 @@
+{
+  "name": "lalosch-lamp-generator",
+  "version": "1.0.0",
+  "description": "LaLosch — Web app e generatore 3D STL parametrico per lampade asimmetriche bicolore",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "generate": "node generate-stl.js"
+  },
+  "keywords": [
+    "3d",
+    "threejs",
+    "stl-generator",
+    "parametric-lamp",
+    "lalosch"
+  ],
+  "author": "LaLosch",
+  "license": "ISC",
+  "dependencies": {
+    "jszip": "^3.10.2",
+    "three": "^0.186.1",
+    "three-bvh-csg": "^0.0.18"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
