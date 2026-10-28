@@ -138,34 +138,10 @@ export function applyCableExitToAssembled(mesh) {
 
   const cutter = evaluator.evaluate(boxBrush, cylBrush, ADDITION);
 
-  // 2. Detect and seal central cable notch in bottom sliding panel so it is 100% continuous
-  const p = geo.getAttribute('position').array;
-  let notchX = [], notchY = [], notchZ = [];
-  for (let i = 0; i < p.length; i += 3) {
-    const x = p[i], y = p[i + 1], z = p[i + 2];
-    if (y <= bb.min.y + 2.2 && z >= 45.0 && z < 49.95 && x < bb.max.x - 40.0) {
-      notchX.push(x); notchY.push(y); notchZ.push(z);
-    }
-  }
-
-  let panelPlug = null;
-  if (notchX.length > 50) {
-    const nxMin = Math.min(...notchX), nxMax = Math.max(...notchX);
-    const nyMin = Math.min(...notchY), nyMax = Math.max(...notchY);
-    const nzMin = Math.min(...notchZ);
-    const pGeo = new THREE.BoxGeometry((nxMax - nxMin) + 0.2, (nyMax - nyMin) + 0.4, (50.0 - nzMin) + 0.4);
-    pGeo.computeVertexNormals();
-    panelPlug = new Brush(pGeo);
-    panelPlug.position.set((nxMin + nxMax) / 2, (nyMin + nyMax) / 2, (nzMin + 50.0) / 2);
-    panelPlug.updateMatrixWorld();
-  }
-
   const mainBrush = new Brush(geo);
   mainBrush.updateMatrixWorld();
 
-  let res = mainBrush;
-  if (panelPlug) res = evaluator.evaluate(res, panelPlug, ADDITION);
-  res = evaluator.evaluate(res, cutter, SUBTRACTION);
+  const res = evaluator.evaluate(mainBrush, cutter, SUBTRACTION);
   return toMeshObject(res);
 }
 
@@ -175,38 +151,7 @@ export function applyCableExitToPlate(plateMesh) {
   const geo = makeMesh(plateMesh);
   const p = geo.getAttribute('position').array;
 
-  // 1. Detect and seal notch in bottom sliding panel on plate:
-  let pPts = [];
-  for (let i = 0; i < p.length; i += 3) {
-    if (p[i + 2] <= 2.2 && p[i + 1] > 142.35 && p[i + 1] < 147.0) {
-      pPts.push({ x: p[i], y: p[i + 1] });
-    }
-  }
-  let panelPlug = null;
-  if (pPts.length > 50) {
-    let xs = [...new Set(pPts.map(pt => Number(pt.x.toFixed(2))))].sort((a, b) => a - b);
-    let clusters = [];
-    let current = [xs[0]];
-    for (let i = 1; i < xs.length; i++) {
-      if (xs[i] - xs[i - 1] < 1.0) current.push(xs[i]);
-      else { clusters.push(current); current = [xs[i]]; }
-    }
-    if (current.length) clusters.push(current);
-    const notchCluster = clusters.find(c => {
-      const w = c[c.length - 1] - c[0];
-      return Math.abs(w - 3.8) < 0.6;
-    });
-    if (notchCluster) {
-      const nxMin = notchCluster[0], nxMax = notchCluster[notchCluster.length - 1];
-      const plugGeo = new THREE.BoxGeometry((nxMax - nxMin) + 0.2, 5.0, 2.5);
-      plugGeo.computeVertexNormals();
-      panelPlug = new Brush(plugGeo);
-      panelPlug.position.set((nxMin + nxMax) / 2, 144.6, 1.0);
-      panelPlug.updateMatrixWorld();
-    }
-  }
-
-  // 2. Find housing (scocca) bounds on plate:
+  // Find housing (scocca) bounds on plate:
   let hMinX = Infinity, hMaxX = -Infinity, hMinY = Infinity, hMaxY = -Infinity;
   let hasHousing = false;
   for (let i = 0; i < p.length; i += 3) {
@@ -219,36 +164,32 @@ export function applyCableExitToPlate(plateMesh) {
     }
   }
 
-  let cutter = null;
-  if (hasHousing) {
-    const plateNotchX = hMaxX - 20.4;
-    const r = 2.0;
-    const cylH = 6.0;
-    const archCenterZ = 46.0;
-    const boxZ = 8.0;
+  if (!hasHousing) return plateMesh;
 
-    const cylGeo = new THREE.CylinderGeometry(r, r, cylH, 32);
-    cylGeo.computeVertexNormals();
-    const cylBrush = new Brush(cylGeo);
-    cylBrush.position.set(plateNotchX, hMinY + 1.0, archCenterZ);
-    cylBrush.updateMatrixWorld();
+  const plateNotchX = hMaxX - 20.4;
+  const r = 2.0;
+  const cylH = 6.0;
+  const archCenterZ = 46.0;
+  const boxZ = 8.0;
 
-    const boxGeo = new THREE.BoxGeometry(r * 2, cylH, boxZ);
-    boxGeo.computeVertexNormals();
-    const boxBrush = new Brush(boxGeo);
-    boxBrush.position.set(plateNotchX, hMinY + 1.0, archCenterZ + boxZ / 2);
-    boxBrush.updateMatrixWorld();
+  const cylGeo = new THREE.CylinderGeometry(r, r, cylH, 32);
+  cylGeo.computeVertexNormals();
+  const cylBrush = new Brush(cylGeo);
+  cylBrush.position.set(plateNotchX, hMinY + 1.0, archCenterZ);
+  cylBrush.updateMatrixWorld();
 
-    cutter = evaluator.evaluate(boxBrush, cylBrush, ADDITION);
-  }
+  const boxGeo = new THREE.BoxGeometry(r * 2, cylH, boxZ);
+  boxGeo.computeVertexNormals();
+  const boxBrush = new Brush(boxGeo);
+  boxBrush.position.set(plateNotchX, hMinY + 1.0, archCenterZ + boxZ / 2);
+  boxBrush.updateMatrixWorld();
+
+  const cutter = evaluator.evaluate(boxBrush, cylBrush, ADDITION);
 
   const mainBrush = new Brush(geo);
   mainBrush.updateMatrixWorld();
 
-  let res = mainBrush;
-  if (panelPlug) res = evaluator.evaluate(res, panelPlug, ADDITION);
-  if (cutter) res = evaluator.evaluate(res, cutter, SUBTRACTION);
-
+  const res = evaluator.evaluate(mainBrush, cutter, SUBTRACTION);
   return toMeshObject(res);
 }
 
